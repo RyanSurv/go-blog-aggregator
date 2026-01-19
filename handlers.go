@@ -109,15 +109,9 @@ func handlerAggregate(s *state, cmd command) error {
 }
 
 // Creates a new feed
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) < 2 {
 		return errors.New("Not enough arguments")
-	}
-
-	// Retrieve the currently logged in user from database to get their ID
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return err
 	}
 
 	// Create the feed
@@ -163,15 +157,9 @@ func handlerFeeds(s *state, cmd command) error {
 }
 
 // Creates a new feed follow
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) < 1 {
 		return errors.New("Not enough arguments")
-	}
-
-	// Retrieve the currently logged in user from database to get their ID
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return err
 	}
 
 	// Get the feed from the URL provided
@@ -196,13 +184,7 @@ func handlerFollow(s *state, cmd command) error {
 }
 
 // Lists all names of feeds logged in user is following
-func handlerFollowing(s *state, cmd command) error {
-	// Retrieve the currently logged in user from database to get their ID
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return err
-	}
-
+func handlerFollowing(s *state, cmd command, user database.User) error {
 	ff, err := s.db.GetFeedFollowForUser(context.Background(), user.ID)
 	if err != nil {
 		return err
@@ -218,5 +200,28 @@ func handlerFollowing(s *state, cmd command) error {
 	str += "]"
 	fmt.Println(str)
 
+	return nil
+}
+
+// Unfollowed a specified feed from logged in user
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) < 1 {
+		return errors.New("Not enough arguments")
+	}
+
+	url := cmd.args[0]
+	feed, err := s.db.GetFeed(context.Background(), url)
+	if err != nil {
+		return err
+	}
+
+	if err := s.db.Unfollow(context.Background(), database.UnfollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}); err != nil {
+		return err
+	}
+
+	fmt.Printf("%s unfollowed %s\n", user.Name, url)
 	return nil
 }

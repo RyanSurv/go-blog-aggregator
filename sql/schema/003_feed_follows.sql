@@ -14,3 +14,6 @@ CREATE TABLE feed_follows (
 
     CONSTRAINT UQ_User_Feed UNIQUE (user_id, feed_id)
 );
+
+-- +goose Down
+DROP TABLE feed_follows;
