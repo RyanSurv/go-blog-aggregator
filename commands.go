@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 )
 
 type command struct {
@@ -19,7 +19,7 @@ func (c *commands) run(s *state, cmd command) error {
 			return err
 		}
 	} else {
-		return errors.New("Command not found")
+		return fmt.Errorf("\"%s\" command not found", cmd.name)
 	}
 
 	return nil

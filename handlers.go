@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -97,14 +98,26 @@ func handlerUsers(s *state, cmd command) error {
 	return nil
 }
 
-// Long-running aggregator service (temporarily set to fetch a single feed)
+// Long-running aggregator service
 func handlerAggregate(s *state, cmd command) error {
-	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if len(cmd.args) < 1 {
+		return errors.New("Not enough arguments")
+	}
+
+	timeBetweenRequests, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(feed)
+	fmt.Printf("Collecting feeds every %s\n", timeBetweenRequests)
+
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		if err := scrapeFeeds(s); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -223,5 +236,33 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 	}
 
 	fmt.Printf("%s unfollowed %s\n", user.Name, url)
+	return nil
+}
+
+// Browse posts
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	limit := int32(2)
+
+	if len(cmd.args) > 0 {
+		limitInt, err := strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return err
+		}
+
+		limit = int32(limitInt)
+	}
+	
+	posts, err := s.db.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit: limit,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, post := range posts {
+		fmt.Println(post)
+	}
+
 	return nil
 }
